@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><title>Register - Upload Service</title></head>
+<body>
+<h2>Upload Service - Register</h2>
+{% for msg in get_flashed_messages() %}<p><b>{{ msg }}</b></p>{% endfor %}
+<form method="POST">
+  <p>Username: <input type="text" name="username" required></p>
+  <p>Email: <input type="email" name="email" required></p>
+  <p>Password: <input type="password" name="password" required minlength="6"></p>
+  <p><button type="submit">Create Account</button></p>
+</form>
+<p>Already have an account? <a href="/login">Login</a></p>
+</body>
+</html>

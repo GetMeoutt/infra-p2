@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head><title>{{ video.title }} - Stream Service</title></head>
+<body>
+<h2>Stream Service</h2>
+<p>Logged in as <b>{{ username }}</b> | <a href="/logout">Logout</a> | <a href="/library">Back to Library</a></p>
+<hr>
+
+<h3>{{ video.title }}</h3>
+
+<video controls width="800">
+  <source src="/stream/{{ video.filename }}" type="{{ video.content_type or 'video/mp4' }}">
+  Your browser does not support the video tag.
+</video>
+
+<p>
+  Uploaded by: <b>{{ video.username }}</b><br>
+  Date: {{ video.uploaded_at[:10] if video.uploaded_at else '-' }}<br>
+  Size: {{ (video.file_size / 1048576)|round(2) if video.file_size else '-' }} MB<br>
+  Format: {{ video.content_type or '-' }}
+</p>
+</body>
+</html>

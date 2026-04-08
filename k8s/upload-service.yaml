@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upload-service
+  namespace: video-app
+  labels:
+    app: upload-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: upload-service
+  template:
+    metadata:
+      labels:
+        app: upload-service
+    spec:
+      containers:
+        - name: upload-service
+          image: tsripan/upload-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: AUTH_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: AUTH_SERVICE_URL
+            - name: FILE_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: FILE_SERVICE_URL
+            - name: MYSQL_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: MYSQL_SERVICE_URL
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: upload-service
+  namespace: video-app
+spec:
+  type: LoadBalancer
+  selector:
+    app: upload-service
+  ports:
+    - port: 5000
+      targetPort: 5000

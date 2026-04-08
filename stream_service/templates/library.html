@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head><title>Video Library - Stream Service</title></head>
+<body>
+<h2>Stream Service - Video Library</h2>
+<p>Logged in as <b>{{ username }}</b> | <a href="/logout">Logout</a></p>
+<hr>
+
+{% for msg in get_flashed_messages() %}<p><b>{{ msg }}</b></p>{% endfor %}
+
+<h3>All Videos ({{ videos|length }})</h3>
+{% if videos %}
+<table border="1" cellpadding="6">
+  <tr><th>Title</th><th>Uploaded by</th><th>Date</th><th>Size</th><th>Action</th></tr>
+  {% for v in videos %}
+  <tr>
+    <td>{{ v.title }}</td>
+    <td>{{ v.username }}</td>
+    <td>{{ v.uploaded_at[:10] if v.uploaded_at else '-' }}</td>
+    <td>{{ (v.file_size / 1048576)|round(1) if v.file_size else '-' }} MB</td>
+    <td><a href="/watch/{{ v.id }}">Watch</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>No videos yet. <a href="{{ upload_url }}">Upload one</a>.</p>
+{% endif %}
+
+<hr>
+<p><small>To upload videos, go to the <a href="{{ upload_url }}">Upload Service (port 5000)</a></small></p>
+</body>
+</html>

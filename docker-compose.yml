@@ -1,0 +1,110 @@
+services:
+
+  # ── Database ──────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: videodb
+      MYSQL_USER: videouser
+      MYSQL_PASSWORD: videopassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql_service/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - video_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 10
+
+  # ── Auth Service ──────────────────────────────────────────────
+  auth_service:
+    build: ./auth_service
+    container_name: auth_service
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=videouser
+      - MYSQL_PASSWORD=videopassword
+      - MYSQL_DB=videodb
+      - SECRET_KEY=change-me-in-production
+    ports:
+      - "5001:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - video_net
+
+  # ── MySQL API Service ─────────────────────────────────────────
+  mysql_service:
+    build: ./mysql_service
+    container_name: mysql_service
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=videouser
+      - MYSQL_PASSWORD=videopassword
+      - MYSQL_DB=videodb
+    ports:
+      - "5003:5003"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - video_net
+
+  # ── File System Service ───────────────────────────────────────
+  file_service:
+    build: ./file_service
+    container_name: file_service
+    volumes:
+      - video_storage:/app/storage
+    ports:
+      - "5002:5002"
+    networks:
+      - video_net
+
+  # ── Upload Web App ────────────────────────────────────────────
+  upload_service:
+    build: ./upload_service
+    container_name: upload_service
+    environment:
+      - AUTH_SERVICE_URL=http://auth_service:5001
+      - FILE_SERVICE_URL=http://file_service:5002
+      - MYSQL_SERVICE_URL=http://mysql_service:5003
+      - SECRET_KEY=change-me-in-production
+    ports:
+      - "5000:5000"
+    depends_on:
+      - auth_service
+      - file_service
+      - mysql_service
+    networks:
+      - video_net
+
+  # ── Stream Web App ────────────────────────────────────────────
+  stream_service:
+    build: ./stream_service
+    container_name: stream_service
+    environment:
+      - AUTH_SERVICE_URL=http://auth_service:5001
+      - FILE_SERVICE_URL=http://file_service:5002
+      - MYSQL_SERVICE_URL=http://mysql_service:5003
+      - SECRET_KEY=change-me-in-production
+    ports:
+      - "5004:5004"
+    depends_on:
+      - auth_service
+      - file_service
+      - mysql_service
+    networks:
+      - video_net
+
+volumes:
+  mysql_data:
+  video_storage:
+
+networks:
+  video_net:
+    driver: bridge

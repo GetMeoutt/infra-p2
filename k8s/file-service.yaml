@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: video-storage-pvc
+  namespace: video-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-service
+  namespace: video-app
+  labels:
+    app: file-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: file-service
+  template:
+    metadata:
+      labels:
+        app: file-service
+    spec:
+      containers:
+        - name: file-service
+          image: tsripan/file-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5002
+          volumeMounts:
+            - name: video-storage
+              mountPath: /app/storage
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+      volumes:
+        - name: video-storage
+          persistentVolumeClaim:
+            claimName: video-storage-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: file-service
+  namespace: video-app
+spec:
+  selector:
+    app: file-service
+  ports:
+    - port: 5002
+      targetPort: 5002

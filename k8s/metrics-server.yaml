@@ -1,0 +1,14 @@
+# Metrics Server is required for HPA to work.
+# On cloud providers (GKE, EKS, AKS), metrics-server is usually pre-installed.
+# For local clusters (minikube, kind), you may need to install it.
+#
+# For minikube:
+#   minikube addons enable metrics-server
+#
+# For other clusters, install via:
+#   kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+#
+# Verify metrics-server is running:
+#   kubectl get pods -n kube-system | grep metrics-server
+#   kubectl top nodes
+#   kubectl top pods -n video-app

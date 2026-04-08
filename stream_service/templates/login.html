@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><title>Login - Stream Service</title></head>
+<body>
+<h2>Stream Service - Login</h2>
+{% for msg in get_flashed_messages() %}<p><b>{{ msg }}</b></p>{% endfor %}
+<form method="POST">
+  <p>Username or Email: <input type="text" name="username" required></p>
+  <p>Password: <input type="password" name="password" required></p>
+  <p><button type="submit">Login</button></p>
+</form>
+<hr>
+<p><small>Upload videos at: <a href="http://localhost:5000">http://localhost:5000</a></small></p>
+</body>
+</html>
