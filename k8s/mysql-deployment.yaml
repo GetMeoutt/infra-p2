@@ -4,6 +4,7 @@ metadata:
   name: mysql-pvc
   namespace: video-app
 spec:
+  storageClassName: gp2
   accessModes:
     - ReadWriteOnce
   resources:

@@ -4,6 +4,7 @@ metadata:
   name: video-storage-pvc
   namespace: video-app
 spec:
+  storageClassName: gp2
   accessModes:
     - ReadWriteOnce
   resources:
@@ -18,7 +19,7 @@ metadata:
   labels:
     app: file-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: file-service
