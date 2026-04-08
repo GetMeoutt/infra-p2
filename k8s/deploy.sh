@@ -93,8 +93,49 @@ kubectl rollout status deployment/upload-service -n video-app --timeout=60s
 kubectl rollout status deployment/stream-service -n video-app --timeout=60s
 echo ""
 
-# Step 5: Deploy HPA
-echo "[5/5] Deploying Horizontal Pod Autoscalers..."
+# Step 5.5: Fetch external LoadBalancer DNS and patch configmap
+echo "[5.5/6] Fetching external LoadBalancer DNS..."
+echo "---------------------------------------------"
+
+echo "  Waiting for upload-service LoadBalancer DNS..."
+UPLOAD_DNS=""
+for i in $(seq 1 60); do
+    UPLOAD_DNS=$(kubectl get svc upload-service -n video-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+    if [ -n "$UPLOAD_DNS" ]; then break; fi
+    sleep 5
+done
+if [ -z "$UPLOAD_DNS" ]; then
+    echo "  WARNING: Could not get upload-service external DNS after 5 minutes"
+else
+    echo "  Upload Service DNS: $UPLOAD_DNS"
+fi
+
+echo "  Waiting for stream-service LoadBalancer DNS..."
+STREAM_DNS=""
+for i in $(seq 1 60); do
+    STREAM_DNS=$(kubectl get svc stream-service -n video-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+    if [ -n "$STREAM_DNS" ]; then break; fi
+    sleep 5
+done
+if [ -z "$STREAM_DNS" ]; then
+    echo "  WARNING: Could not get stream-service external DNS after 5 minutes"
+else
+    echo "  Stream Service DNS: $STREAM_DNS"
+fi
+
+if [ -n "$UPLOAD_DNS" ] && [ -n "$STREAM_DNS" ]; then
+    echo "  Patching configmap with external URLs..."
+    kubectl patch configmap service-config -n video-app --type merge -p "{\"data\":{\"STREAM_EXTERNAL_URL\":\"http://$STREAM_DNS:5004\",\"UPLOAD_EXTERNAL_URL\":\"http://$UPLOAD_DNS:5000\"}}"
+    echo "  Restarting frontend services to pick up new URLs..."
+    kubectl rollout restart deployment/upload-service -n video-app
+    kubectl rollout restart deployment/stream-service -n video-app
+    kubectl rollout status deployment/upload-service -n video-app --timeout=60s
+    kubectl rollout status deployment/stream-service -n video-app --timeout=60s
+fi
+echo ""
+
+# Step 6: Deploy HPA
+echo "[6/6] Deploying Horizontal Pod Autoscalers..."
 echo "---------------------------------------------"
 kubectl apply -f "$PROJECT_DIR/k8s/hpa.yaml"
 echo ""
@@ -115,8 +156,16 @@ kubectl get hpa -n video-app
 echo ""
 echo "---------------------------------------------"
 echo "Access the application:"
-echo "  Upload Service: kubectl port-forward svc/upload-service 5000:5000 -n video-app"
-echo "  Stream Service: kubectl port-forward svc/stream-service 5004:5004 -n video-app"
+if [ -n "$UPLOAD_DNS" ]; then
+    echo "  Upload Service: http://$UPLOAD_DNS:5000"
+else
+    echo "  Upload Service: kubectl port-forward svc/upload-service 5000:5000 -n video-app"
+fi
+if [ -n "$STREAM_DNS" ]; then
+    echo "  Stream Service: http://$STREAM_DNS:5004"
+else
+    echo "  Stream Service: kubectl port-forward svc/stream-service 5004:5004 -n video-app"
+fi
 echo ""
 echo "Monitor HPA scaling:"
 echo "  kubectl get hpa -n video-app -w"

@@ -37,6 +37,11 @@ spec:
                 configMapKeyRef:
                   name: service-config
                   key: MYSQL_SERVICE_URL
+            - name: UPLOAD_EXTERNAL_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: UPLOAD_EXTERNAL_URL
           livenessProbe:
             httpGet:
               path: /

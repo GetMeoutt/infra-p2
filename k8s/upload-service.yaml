@@ -37,6 +37,11 @@ spec:
                 configMapKeyRef:
                   name: service-config
                   key: MYSQL_SERVICE_URL
+            - name: STREAM_EXTERNAL_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: STREAM_EXTERNAL_URL
           livenessProbe:
             httpGet:
               path: /

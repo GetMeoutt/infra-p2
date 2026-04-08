@@ -99,7 +99,8 @@ def upload():
     # GET — show upload form + list of user's videos
     videos_resp = requests.get(f'{DB}/videos', timeout=5)
     videos = videos_resp.json().get('videos', []) if videos_resp.ok else []
-    return render_template('upload.html', username=session.get('username'), videos=videos, stream_url='http://localhost:5004')
+    stream_url = os.environ.get('STREAM_EXTERNAL_URL', 'http://localhost:5004')
+    return render_template('upload.html', username=session.get('username'), videos=videos, stream_url=stream_url)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

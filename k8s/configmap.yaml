@@ -4,12 +4,14 @@ metadata:
   name: service-config
   namespace: video-app
 data:
-  MYSQL_HOST: mysql
+  MYSQL_HOST: mysql-0.mysql.video-app.svc.cluster.local
   MYSQL_PORT: "3306"
   MYSQL_DB: videodb
   AUTH_SERVICE_URL: "http://auth-service:5001"
   FILE_SERVICE_URL: "http://file-service:5002"
   MYSQL_SERVICE_URL: "http://mysql-service:5003"
+  STREAM_EXTERNAL_URL: "http://localhost:5004"
+  UPLOAD_EXTERNAL_URL: "http://localhost:5000"
 ---
 apiVersion: v1
 kind: ConfigMap

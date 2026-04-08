@@ -1,8 +1,8 @@
-# Video Streaming Platform - Kubernetes Deployment Guide
+# Video Streaming Platform - AWS EKS Deployment Guide
 
 ## Architecture Overview
 
-This project deploys a microservices-based video streaming platform on Kubernetes with Horizontal Pod Autoscaling (HPA).
+This project deploys a microservices-based video streaming platform on AWS EKS with Horizontal Pod Autoscaling (HPA).
 
 ### Services
 
@@ -53,39 +53,16 @@ This project deploys a microservices-based video streaming platform on Kubernete
 
 - **Docker** installed and running
 - **kubectl** installed and configured
-- **A Kubernetes cluster** (one of the following):
-  - **Minikube** (local testing)
-  - **Google Kubernetes Engine (GKE)**
-  - **Amazon EKS**
-  - **Azure AKS**
+- **AWS CLI** installed and configured
+- **eksctl** installed
+- **An EKS cluster** running on AWS
 - **Metrics Server** installed on the cluster (required for HPA)
 
 ---
 
 ## Step-by-Step Deployment
 
-### Step 1: Set Up a Kubernetes Cluster
-
-#### Option A: Minikube (Local)
-
-```bash
-minikube start --cpus=4 --memory=4096
-minikube addons enable metrics-server
-eval $(minikube docker-env)
-```
-
-#### Option B: Google Cloud (GKE)
-
-```bash
-gcloud container clusters create video-cluster \
-  --num-nodes=3 \
-  --machine-type=e2-medium \
-  --zone=us-central1-a
-
-gcloud container clusters get-credentials video-cluster --zone=us-central1-a
-```
-
-#### Option C: AWS (EKS)
+### Step 1: Set Up the EKS Cluster
 
 ```bash
 eksctl create cluster \
@@ -95,28 +72,15 @@ eksctl create cluster \
   --node-type t3.medium
 ```
 
-#### Option D: Azure (AKS)
+### Step 2: Build and Push Docker Images
 
-```bash
-az aks create \
-  --resource-group myResourceGroup \
-  --name video-cluster \
-  --node-count 3 \
-  --node-vm-size Standard_B2s \
-  --generate-ssh-keys
-
-az aks get-credentials --resource-group myResourceGroup --name video-cluster
-```
-
-### Step 2: Build Docker Images
-
-Navigate to the project root directory (`infra2-main/`):
+Navigate to the project root directory and build each service image:
 
 ```bash
 cd infra2-main
 ```
 
-Build each service image:
+Build, tag, and push images to your container registry:
 
 ```bash
 docker build -t auth-service:latest ./auth_service
@@ -126,20 +90,34 @@ docker build -t upload-service:latest ./upload_service
 docker build -t stream-service:latest ./stream_service
 ```
 
-> **For cloud deployments**, tag and push images to your container registry:
->
-> ```bash
-> # Example for GCR:
-> docker tag auth-service:latest gcr.io/YOUR_PROJECT_ID/auth-service:latest
-> docker push gcr.io/YOUR_PROJECT_ID/auth-service:latest
-> # Repeat for all services...
-> ```
->
-> Then update the `image:` field in each YAML file to use the full registry path.
+Tag and push to your registry (e.g., Docker Hub or ECR):
+
+```bash
+# Example for Docker Hub:
+docker tag auth-service:latest YOUR_REGISTRY/auth-service:latest
+docker push YOUR_REGISTRY/auth-service:latest
+# Repeat for all services...
+```
+
+Then update the `image:` field in each YAML file to use the full registry path.
 
 ### Step 3: Deploy to Kubernetes
 
-Apply the manifests in order:
+Use the deploy script to deploy everything at once. The script automatically:
+1. Builds Docker images
+2. Creates the namespace, secrets, and configmaps
+3. Deploys MySQL, backend services, and frontend services
+4. Waits for AWS to assign LoadBalancer DNS names
+5. Patches the configmap with the real external URLs
+6. Restarts frontend services to pick up the DNS
+7. Deploys Horizontal Pod Autoscalers
+
+```bash
+chmod +x k8s/deploy.sh
+./k8s/deploy.sh
+```
+
+Or deploy manually step by step:
 
 ```bash
 # 1. Create namespace
@@ -174,13 +152,6 @@ kubectl rollout status deployment/stream-service -n video-app --timeout=60s
 kubectl apply -f k8s/hpa.yaml
 ```
 
-> **Or use the deploy script** to do everything at once:
->
-> ```bash
-> chmod +x k8s/deploy.sh
-> ./k8s/deploy.sh
-> ```
-
 ### Step 4: Verify Deployment
 
 ```bash
@@ -208,26 +179,16 @@ stream-service-xx 1/1     Running   2
 
 ### Step 5: Access the Application
 
-#### For Minikube:
+Get the external AWS LoadBalancer DNS names:
 
 ```bash
-# Port forward to access locally
-kubectl port-forward svc/upload-service 5000:5000 -n video-app &
-kubectl port-forward svc/stream-service 5004:5004 -n video-app &
-```
-
-Then open:
-- Upload videos: http://localhost:5000
-- Watch videos: http://localhost:5004
-
-#### For Cloud (LoadBalancer):
-
-```bash
-# Get external IPs
 kubectl get svc -n video-app
 ```
 
-Use the `EXTERNAL-IP` shown for `upload-service` and `stream-service`.
+Use the `EXTERNAL-IP` (AWS ELB DNS) shown for `upload-service` and `stream-service`:
+
+- Upload videos: `http://<upload-service-ELB-DNS>:5000`
+- Watch videos: `http://<stream-service-ELB-DNS>:5004`
 
 ---
 
@@ -345,15 +306,8 @@ chmod +x k8s/teardown.sh
 ./k8s/teardown.sh
 ```
 
-Delete the cluster (if cloud):
+Delete the EKS cluster:
 
 ```bash
-# GKE
-gcloud container clusters delete video-cluster --zone=us-central1-a
-
-# EKS
 eksctl delete cluster --name video-cluster
-
-# AKS
-az aks delete --resource-group myResourceGroup --name video-cluster
 ```

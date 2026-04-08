@@ -59,7 +59,8 @@ def logout():
 def library():
     resp = requests.get(f'{DB}/videos', timeout=5)
     videos = resp.json().get('videos', []) if resp.ok else []
-    return render_template('library.html', username=session.get('username'), videos=videos, upload_url='http://localhost:5000')
+    upload_url = os.environ.get('UPLOAD_EXTERNAL_URL', 'http://localhost:5000')
+    return render_template('library.html', username=session.get('username'), videos=videos, upload_url=upload_url)
 
 @app.route('/watch/<int:video_id>')
 @login_required
