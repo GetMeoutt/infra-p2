@@ -48,25 +48,31 @@ spec:
               port: 5000
             initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 18
           readinessProbe:
             httpGet:
               path: /
               port: 5000
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 12
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 300m
               memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 4Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: upload-service
   namespace: video-app
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "600"
 spec:
   type: LoadBalancer
   selector:

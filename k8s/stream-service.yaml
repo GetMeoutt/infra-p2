@@ -67,6 +67,8 @@ kind: Service
 metadata:
   name: stream-service
   namespace: video-app
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "600"
 spec:
   type: LoadBalancer
   selector:
